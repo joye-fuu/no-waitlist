@@ -5,6 +5,7 @@ backend/firebase-functions/node_modules
 backend/firebase-functions/lib/
 backend/firebase-functions/.firebaserc
 backend/scraper/node_modules
+backend/scraper/local_tests
 
 # GitHub Actions
 .github/workflows/*.json

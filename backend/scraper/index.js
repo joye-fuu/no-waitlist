@@ -31,6 +31,8 @@ class UNSWTimetableScraper {
     this.browser = null;
     this.isTestRun = isTestRun;
     this.scrapedClasses = [];
+    console.log('🎯 COMP T3 2025 Scraper initialized');
+    console.log('📊 Configuration: COMP courses only, Term 3 2025');
   }
 
   async init() {
@@ -63,17 +65,48 @@ class UNSWTimetableScraper {
     
     try {
       console.log('Navigating to UNSW timetable...');
-      await page.goto('https://timetable.unsw.edu.au/', { 
+      await page.goto('https://timetable.unsw.edu.au/2025/subjectSearch.html', { 
         waitUntil: 'networkidle0',
         timeout: 30000 
       });
 
-      // Get subject areas
+      // Wait a bit more for dynamic content
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Get subject areas with more comprehensive selectors
+      console.log('Looking for subject areas...');
       const subjectAreas = await this.getSubjectAreas(page);
       console.log(`Found ${subjectAreas.length} subject areas`);
 
-      // Limit for test runs
-      const areasToProcess = this.isTestRun ? subjectAreas.slice(0, 2) : subjectAreas;
+      if (subjectAreas.length === 0) {
+        console.log('No subject areas found. Checking page content...');
+        const pageContent = await page.content();
+        console.log('Page title:', await page.title());
+        
+        // Check for common elements that might indicate the page structure
+        const links = await page.evaluate(() => {
+          const allLinks = Array.from(document.querySelectorAll('a'));
+          return allLinks.slice(0, 10).map(link => ({
+            text: link.textContent?.trim() || '',
+            href: link.href || ''
+          }));
+        });
+        console.log('Sample links found:', links);
+        
+        // Return early if no subject areas found
+        return [];
+      }
+
+      // Filter to only COMP courses for 2025
+      const compAreas = subjectAreas.filter(area => area.name === 'COMP');
+      
+      if (compAreas.length === 0) {
+        console.log('No COMP subject area found!');
+        return [];
+      }
+
+      // Limit for test runs - but focus on COMP
+      const areasToProcess = this.isTestRun ? compAreas.slice(0, 1) : compAreas;
 
       for (const subjectArea of areasToProcess) {
         try {
@@ -105,20 +138,45 @@ class UNSWTimetableScraper {
   }
 
   async getSubjectAreas(page) {
-    return await page.evaluate(() => {
-      const links = Array.from(document.querySelectorAll('a[href*="subject-area"]'));
+    const subjectAreas = await page.evaluate(() => {
+      // Look for subject code links (like ACCT, ACTL, AERO, etc.)
+      const links = Array.from(document.querySelectorAll('a')).filter(link => {
+        const href = link.href || '';
+        const text = link.textContent?.trim() || '';
+        
+        // Look for links that go to subject pages (pattern: /2025/SUBJECTKENS.html)
+        return href.match(/\/2025\/[A-Z]{4}KENS\.html$/) && 
+               text.match(/^[A-Z]{4}$/) && 
+               text.length === 4;
+      });
+      
       return links.map(link => ({
         name: link.textContent?.trim() || '',
         url: link.href
       })).filter(item => item.name && item.url);
     });
+    
+    console.log(`DEBUG: Found ${subjectAreas.length} subject code links`);
+    if (subjectAreas.length > 0) {
+      console.log(`DEBUG: First few subjects:`, subjectAreas.slice(0, 5));
+    }
+    
+    return subjectAreas;
   }
 
   async getCoursesForSubject(page, subjectUrl) {
     await page.goto(subjectUrl, { waitUntil: 'networkidle0' });
     
     return await page.evaluate(() => {
-      const links = Array.from(document.querySelectorAll('a[href*="/course/"]'));
+      // Look for course links that match pattern like COMP1511, COMP2041, etc.
+      const links = Array.from(document.querySelectorAll('a')).filter(link => {
+        const text = link.textContent?.trim() || '';
+        const href = link.href || '';
+        
+        // Match course code pattern (e.g., COMP1511) and has corresponding .html link
+        return text.match(/^[A-Z]{4}\d{4}$/) && href.includes('.html');
+      });
+      
       return links.map(link => link.href);
     });
   }
@@ -128,109 +186,100 @@ class UNSWTimetableScraper {
       await page.goto(courseUrl, { waitUntil: 'networkidle0' });
 
       const courseData = await page.evaluate(() => {
-        // Extract course info
-        const courseCodeElement = document.querySelector('h1');
-        const fullTitle = courseCodeElement?.textContent?.trim() || '';
-        const parts = fullTitle.split(' ');
-        const courseCode = parts[0] || '';
-        const courseName = parts.slice(1).join(' ') || '';
+        // Extract course info from the page
+        const pageText = document.body.textContent || '';
+        
+        // Look for course title - it should be in format like "COMP1511 Programming Fundamentals"
+        const titleMatch = pageText.match(/([A-Z]{4}\d{4})\s+(.+?)(?=\n|Faculty)/);
+        const courseCode = titleMatch ? titleMatch[1] : '';
+        const courseName = titleMatch ? titleMatch[2].trim() : '';
 
-        const classes = [];
-        const classRows = document.querySelectorAll('table tbody tr');
-
-        classRows.forEach(row => {
-          const cells = row.querySelectorAll('td');
-          if (cells.length < 7) return;
-
-          // Extract enrollment data (format: "enrolled / capacity")
-          const enrolmentText = cells[6]?.textContent?.trim() || '';
-          const enrolmentMatch = enrolmentText.match(/(\d+)\s*\/\s*(\d+)/);
-          const enrolments = enrolmentMatch ? parseInt(enrolmentMatch[1]) : 0;
-          const capacity = enrolmentMatch ? parseInt(enrolmentMatch[2]) : 0;
-
-          // Extract basic class info
-          const classId = parseInt(cells[0]?.textContent?.trim()) || 0;
-          const section = cells[1]?.textContent?.trim() || '';
-          const term = cells[2]?.textContent?.trim() || '';
-          const activity = cells[3]?.textContent?.trim() || '';
-          const status = cells[4]?.textContent?.trim() || '';
-          const termDatesText = cells[5]?.textContent?.trim() || '';
+        // For 2025, use the new data structure approach
+        const dataElements = Array.from(document.querySelectorAll('.data'));
+        const dataTexts = dataElements.map(el => el.innerText?.trim() || '');
+        
+        let foundClasses = [];
+        const seenClasses = new Set(); // Avoid duplicates
+        
+        // Look for class data sequences in the 2025 format
+        for (let i = 0; i < dataTexts.length - 8; i++) {
+          const potential = dataTexts.slice(i, i + 10);
           
-          // Parse term dates
-          const dateParts = termDatesText.split(' - ');
-          const termDates = {
-            start: dateParts[0] || '',
-            end: dateParts[1] || ''
-          };
-
-          // Extract times and locations from the complex cell
-          const timesCell = cells[7]?.innerHTML || '';
-          const times = parseTimesAndLocations(timesCell);
-
-          if (classId > 0) {
-            classes.push({
-              courseCode,
-              courseName,
-              classID: classId,
-              section,
-              term,
-              activity,
-              status,
-              courseEnrolment: {
-                enrolments,
-                capacity
-              },
-              termDates,
-              mode: 'In Person',
-              times,
-              notes: cells[8]?.textContent?.trim() || undefined,
-              lastUpdated: new Date().toISOString()
-            });
-          }
-        });
-
-        // Helper function to parse times and locations
-        function parseTimesAndLocations(html) {
-          // This is a simplified parser - you may need to enhance this
-          // based on the actual HTML structure of the timetable
-          const times = [];
+          // Check if this looks like a class record (2025 format)
+          const classId = parseInt(potential[0]);
+          if (isNaN(classId) || classId < 1000) continue;
           
-          // Remove HTML tags and split by lines
-          const text = html.replace(/<[^>]*>/g, '\n').split('\n').filter(line => line.trim());
+          // Check for status indicators
+          const statusIndex = potential.findIndex(text => 
+            text === 'Open' || text === 'Full' || text === 'On Hold'
+          );
           
-          for (let i = 0; i < text.length; i++) {
-            const line = text[i].trim();
+          // Check for enrolment pattern
+          const enrolmentIndex = potential.findIndex(text => text.match(/^\d+\/\d+$/));
+          
+          // Check for term indicator - FILTER FOR T3 ONLY
+          const termIndex = potential.findIndex(text => text === 'T3');
+          
+          // Must have all three indicators and in reasonable positions, and must be T3
+          if (statusIndex > 0 && statusIndex < 5 && 
+              enrolmentIndex > 0 && enrolmentIndex < 5 && 
+              termIndex > 0 && termIndex < 8) {
             
-            // Look for day patterns (Mon, Tue, Wed, etc.)
-            const dayMatch = line.match(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/);
-            if (dayMatch) {
-              // Try to find time pattern in the same or next line
-              const timeMatch = (line + ' ' + (text[i + 1] || '')).match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
-              
-              if (timeMatch) {
-                times.push({
-                  day: dayMatch[1],
-                  time: {
-                    start: timeMatch[1],
-                    end: timeMatch[2]
-                  },
-                  weeks: '1-10', // Default - would need better parsing
-                  location: 'TBA' // Would need better parsing
-                });
+            // Extract the structured data
+            const section = potential[1] || '';
+            const status = potential[statusIndex] || '';
+            const enrolment = potential[enrolmentIndex] || '';
+            const term = potential[termIndex] || '';
+            
+            // Try to find activity (look around the term)
+            let activity = '';
+            for (let j = Math.max(0, termIndex - 3); j < Math.min(potential.length, termIndex + 3); j++) {
+              if (potential[j] && (
+                potential[j].includes('Lecture') || 
+                potential[j].includes('Tutorial') || 
+                potential[j].includes('Laboratory') ||
+                potential[j].includes('Course Enrolment')
+              )) {
+                activity = potential[j];
+                break;
               }
             }
+            
+            // Parse enrolment
+            const [enrolled, capacity] = enrolment.split('/').map(num => parseInt(num) || 0);
+            
+            // Create unique key to avoid duplicates
+            const classKey = `${classId}-${term}-${activity}`;
+            if (!seenClasses.has(classKey) && enrolled >= 0 && capacity > 0) {
+              seenClasses.add(classKey);
+              
+              foundClasses.push({
+                courseCode,
+                courseName,
+                classID: classId,
+                section: section,
+                term: term,
+                activity: activity || 'Unknown',
+                status: status,
+                courseEnrolment: {
+                  enrolments: enrolled,
+                  capacity: capacity
+                },
+                mode: 'In Person',
+                lastUpdated: new Date().toISOString()
+              });
+            }
           }
-          
-          return times;
         }
-
+        
         return {
           courseCode,
           courseName,
-          classes
+          classes: foundClasses
         };
       });
 
+      console.log(`Found ${courseData.classes.length} classes in course`);
       return courseData;
     } catch (error) {
       console.error(`Error scraping course ${courseUrl}:`, error.message);
@@ -239,7 +288,25 @@ class UNSWTimetableScraper {
   }
 
   async saveToFirestore() {
-    console.log(`Saving ${this.scrapedClasses.length} classes to Firestore...`);
+    console.log(`💾 Saving ${this.scrapedClasses.length} COMP T3 2025 classes to Firestore...`);
+    
+    if (this.scrapedClasses.length === 0) {
+      console.log('⚠️  No classes to save');
+      return;
+    }
+    
+    // Show summary before saving
+    const coursesSummary = {};
+    const statusSummary = {};
+    
+    this.scrapedClasses.forEach(cls => {
+      coursesSummary[cls.courseCode] = (coursesSummary[cls.courseCode] || 0) + 1;
+      statusSummary[cls.status] = (statusSummary[cls.status] || 0) + 1;
+    });
+    
+    console.log('📊 Summary of classes being saved:');
+    console.log('Courses:', Object.entries(coursesSummary).map(([course, count]) => `${course}: ${count}`).join(', '));
+    console.log('Status:', Object.entries(statusSummary).map(([status, count]) => `${status}: ${count}`).join(', '));
     
     const batch = db.batch();
     let batchCount = 0;
@@ -248,7 +315,8 @@ class UNSWTimetableScraper {
       const docRef = db.collection('classes').doc(classData.classID.toString());
       batch.set(docRef, {
         ...classData,
-        lastUpdated: admin.firestore.Timestamp.now()
+        lastUpdated: admin.firestore.Timestamp.now(),
+        scrapedFor: 'comp-t3-2025' // Add identifier for this specific scraper run
       }, { merge: true });
       
       batchCount++;
@@ -256,6 +324,7 @@ class UNSWTimetableScraper {
       // Firestore batch limit is 500
       if (batchCount === 500) {
         await batch.commit();
+        console.log(`💾 Batch saved: ${batchCount} classes`);
         batchCount = 0;
       }
     }
@@ -264,7 +333,7 @@ class UNSWTimetableScraper {
       await batch.commit();
     }
     
-    console.log('Successfully saved to Firestore');
+    console.log('✅ Successfully saved all COMP T3 2025 classes to Firestore');
   }
 }
 
@@ -273,17 +342,18 @@ async function main() {
   const scraper = new UNSWTimetableScraper(isTestRun);
   
   try {
-    console.log('Starting UNSW timetable scraper...');
+    console.log('Starting UNSW COMP T3 2025 scraper...');
     console.log(`Test run: ${isTestRun}`);
+    console.log('Target: COMP courses, Term 3 2025 only');
     
     await scraper.init();
     await scraper.scrapeAllCourses();
     await scraper.saveToFirestore();
     
-    console.log('Scraper completed successfully!');
+    console.log(`🎉 COMP T3 2025 scraper completed successfully! Found ${scraper.scrapedClasses.length} classes`);
     process.exit(0);
   } catch (error) {
-    console.error('Scraper failed:', error);
+    console.error('COMP T3 2025 scraper failed:', error);
     process.exit(1);
   } finally {
     await scraper.close();

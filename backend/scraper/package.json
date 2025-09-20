@@ -1,11 +1,13 @@
 {
-  "name": "unsw-timetable-scraper",
+  "name": "unsw-comp-t3-scraper",
   "version": "1.0.0",
-  "description": "UNSW Timetable Scraper for GitHub Actions",
+  "description": "UNSW COMP T3 2025 Timetable Scraper for GitHub Actions",
   "main": "index.js",
   "scripts": {
     "scrape": "node index.js",
-    "test": "node index.js --test"
+    "test": "node index.js --test",
+    "test-comp-t3": "node test-focused-comp-2025.js",
+    "test-actions": "node test-github-actions.js"
   },
   "dependencies": {
     "firebase-admin": "^12.4.0",

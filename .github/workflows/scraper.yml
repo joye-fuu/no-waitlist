@@ -1,18 +1,18 @@
-name: UNSW Timetable Scraper
+name: UNSW COMP T3 2025 Scraper
 
 on:
   schedule:
-    # Run every hour at minute 0 (e.g., 1:00, 2:00, 3:00...)
+    # Run every hour at minute 0 during T3 period (July-November 2025)
     - cron: "0 * * * *"
   workflow_dispatch: # Allow manual triggering
     inputs:
       test_run:
-        description: "Test run (limited courses)"
+        description: "Test run (limited COMP courses)"
         required: false
         default: "false"
 
 jobs:
-  scrape-timetable:
+  scrape-comp-t3:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -60,7 +60,12 @@ jobs:
           cd backend/scraper
           node test-firebase.js
 
-      - name: Run scraper
+      - name: Test COMP T3 2025 setup
+        run: |
+          cd backend/scraper
+          npm run test-actions
+
+      - name: Run COMP T3 2025 scraper
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           TEST_RUN: ${{ github.event.inputs.test_run }}

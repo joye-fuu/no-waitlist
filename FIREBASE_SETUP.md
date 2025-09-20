@@ -1,4 +1,12 @@
-# Firebase Setup for GitHub Actions
+# Firebase Setup for COMP T3 2025 Scraper
+
+## Project Overview
+
+This scraper focuses specifically on:
+
+- **COMP courses only** (Computer Science)
+- **T3 2025 term** (Term 3, July-November 2025)
+- **Real-time enrollment tracking** for waitlist functionality
 
 ## Required GitHub Secrets
 
@@ -36,10 +44,10 @@ This allows users to be automatically signed in without any login UI.
 ## Testing the Setup
 
 1. Go to your GitHub repo → Actions tab
-2. Find "UNSW Timetable Scraper" workflow
+2. Find "UNSW COMP T3 2025 Scraper" workflow
 3. Click "Run workflow" → Check "Test run" → Run workflow
 
-This will run a limited test scrape to verify everything works.
+This will run a limited test scrape of COMP T3 2025 courses to verify everything works.
 
 ## Troubleshooting Common Issues
 
@@ -88,11 +96,31 @@ After running the scraper, you can view the data in several ways:
 ### 2. GitHub Actions Logs
 
 1. Go to your repo → Actions tab
-2. Click on the latest "UNSW Timetable Scraper" run
-3. Click on "scrape-timetable" job
-4. Expand "Run scraper" step
-5. Look for logs like "Saving X classes to Firestore..."
+2. Click on the latest "UNSW COMP T3 2025 Scraper" run
+3. Click on "scrape-comp-t3" job
+4. Expand "Run COMP T3 2025 scraper" step
+5. Look for logs like "Saving X COMP T3 2025 classes to Firestore..."
 
 ### 3. iOS App (Once Connected)
 
-Your iOS app will read this data automatically from Firestore to display available classes.
+Your iOS app will read this COMP T3 2025 data automatically from Firestore to display available classes.
+
+## Current Configuration
+
+The scraper is configured for:
+
+- **Subject:** COMP (Computer Science) only
+- **Year:** 2025
+- **Term:** T3 (Term 3) only
+- **Data:** Real-time enrollment numbers (enrolled/capacity)
+- **Schedule:** Runs every hour during T3 period
+
+## Test Commands
+
+Local testing (without Firebase):
+
+```bash
+cd backend/scraper
+npm run test-comp-t3      # Test COMP T3 extraction
+npm run test-actions      # Test GitHub Actions setup
+```
