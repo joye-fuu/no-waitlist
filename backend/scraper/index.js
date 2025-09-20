@@ -1,12 +1,28 @@
 const puppeteer = require('puppeteer');
 const admin = require('firebase-admin');
+const fs = require('fs');
 
 // Initialize Firebase Admin
-const serviceAccount = require('./firebase-service-account.json');
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  projectId: process.env.FIREBASE_PROJECT_ID || 'no-waitlist'
-});
+let firebaseConfig;
+
+if (fs.existsSync('./firebase-service-account.json')) {
+  // GitHub Actions or local development with service account file
+  const serviceAccount = require('./firebase-service-account.json');
+  firebaseConfig = {
+    credential: admin.credential.cert(serviceAccount),
+    projectId: process.env.FIREBASE_PROJECT_ID || 'no-waitlist'
+  };
+} else {
+  // Local development fallback - won't work but won't crash
+  console.error('Firebase service account not found. This scraper needs to run in GitHub Actions.');
+  console.error('To test locally, you would need to:');
+  console.error('1. Download your Firebase service account key');
+  console.error('2. Save it as firebase-service-account.json in this directory');
+  console.error('3. Never commit this file to git!');
+  process.exit(1);
+}
+
+admin.initializeApp(firebaseConfig);
 
 const db = admin.firestore();
 
