@@ -58,7 +58,7 @@ jobs:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
           cd backend/scraper
-          node test-firebase.js
+          npm run test-firebase
 
       - name: Test COMP T3 2025 setup
         run: |

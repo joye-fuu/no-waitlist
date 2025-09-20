@@ -7,6 +7,11 @@ backend/firebase-functions/.firebaserc
 backend/scraper/node_modules
 backend/scraper/local_tests
 
+# Development debug scripts (keep test scripts)
+backend/scraper/debug-*.js
+backend/scraper/deep-dive-*.js
+backend/scraper/*.log
+
 # GitHub Actions
 .github/workflows/*.json
 
@@ -106,6 +111,11 @@ iOSInjectionProject/
 # GoogleService-Info.plist should generally be committed, but if it contains
 # sensitive data for your specific setup, you might want to exclude it
 # GoogleService-Info.plist
+
+# Firebase service account keys (NEVER COMMIT THESE!)
+firebase-service-account.json
+backend/scraper/firebase-service-account.json
+backend/firebase-functions/firebase-service-account.json
 
 # Firebase debug files
 firebase_debug.log

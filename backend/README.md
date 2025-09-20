@@ -41,6 +41,13 @@ npm run test-actions
 node test-updated-2025.js
 ```
 
+### Firebase Testing (Requires Service Account)
+
+```bash
+# Test Firebase connection and permissions
+npm run test-firebase
+```
+
 ### Production Run (Requires Firebase)
 
 ```bash
