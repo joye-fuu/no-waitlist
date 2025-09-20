@@ -36,7 +36,7 @@ class UNSWTimetableScraper {
   async init() {
     console.log('Initializing browser...');
     this.browser = await puppeteer.launch({
-      headless: 'new',
+      headless: true,  // Updated for newer Puppeteer versions
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',

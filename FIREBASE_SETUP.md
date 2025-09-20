@@ -41,6 +41,22 @@ This allows users to be automatically signed in without any login UI.
 
 This will run a limited test scrape to verify everything works.
 
+## Troubleshooting Common Issues
+
+### Exit Code 100 During Chrome Setup
+
+If you see errors about missing packages like `libasound2`, this is due to package name changes in newer Ubuntu versions. The workflow has been updated to use the correct package names for Ubuntu 24.04.
+
+### Exit Code 100 During Scraper Execution
+
+This usually indicates:
+
+1. **Missing GitHub Secrets** - Make sure both `FIREBASE_SERVICE_ACCOUNT_KEY` and `FIREBASE_PROJECT_ID` are set correctly
+2. **Wrong Firebase Project ID** - Verify your project ID matches your Firebase project
+3. **Firebase Permissions** - Ensure the service account has Firestore write permissions
+
+Check the "Test Firebase connection" step in the GitHub Actions logs for specific error details.
+
 ## Manual Trigger
 
 You can manually trigger the scraper anytime by:
