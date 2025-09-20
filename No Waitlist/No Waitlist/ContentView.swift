@@ -9,9 +9,22 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var firebaseService = FirebaseService()
 
     var body: some View {
         
+        if !authManager.isAuthenticated {
+            // Show loading state while authenticating
+            ProgressView("Setting up...")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            // Show main app content
+            mainContent
+        }
+    }
+    
+    private var mainContent: some View {
     ScrollView {
         VStack(spacing: 0) {
                 Course(code: "COMP4920")
@@ -27,6 +40,7 @@ struct ContentView: View {
         }.safeAreaInset(edge: .bottom) {
             AddClass()
                 .background(Color.white)
+        }
         }
     }
 }
@@ -126,7 +140,7 @@ struct AddClass: View {
     }
 }
 
-
 #Preview {
     ContentView()
 }
+

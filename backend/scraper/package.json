@@ -1,0 +1,14 @@
+{
+  "name": "unsw-timetable-scraper",
+  "version": "1.0.0",
+  "description": "UNSW Timetable Scraper for GitHub Actions",
+  "main": "index.js",
+  "scripts": {
+    "scrape": "node index.js",
+    "test": "node index.js --test"
+  },
+  "dependencies": {
+    "puppeteer": "^21.1.1",
+    "firebase-admin": "^12.4.0"
+  }
+}

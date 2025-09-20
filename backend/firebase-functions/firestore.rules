@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Classes data is publicly readable
+    match /classes/{classId} {
+      allow read: if true;
+      allow write: if false; // Only server can write class data
+    }
+    
+    // Waitlists are user-specific
+    match /waitlists/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

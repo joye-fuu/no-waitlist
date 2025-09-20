@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import FirebaseCore
+import FirebaseAuth
 
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -22,6 +23,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct No_WaitlistApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var authManager = AuthManager()
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Item.self,
@@ -38,6 +41,7 @@ struct No_WaitlistApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authManager)
         }
         .modelContainer(sharedModelContainer)
     }
