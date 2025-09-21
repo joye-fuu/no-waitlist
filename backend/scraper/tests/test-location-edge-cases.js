@@ -58,34 +58,49 @@ class LocationEdgeCaseTest {
     const condensedResult = this.parseLocationCondensed(dataTexts, classIndex);
     if (condensedResult.location) {
       Object.assign(locationResult, condensedResult);
-      locationResult.location = this.validateAndNormalizeLocation(locationResult.location, classID, term);
-      return locationResult;
+      const validatedLocation = this.validateAndNormalizeLocation(locationResult.location, classID, term);
+      if (validatedLocation) {
+        locationResult.location = validatedLocation;
+        return locationResult;
+      }
     }
 
     // Strategy 2: Expanded detailed format
     const expandedResult = this.parseLocationExpanded(dataTexts, classID);
     if (expandedResult.location) {
       Object.assign(locationResult, expandedResult);
-      locationResult.location = this.validateAndNormalizeLocation(locationResult.location, classID, term);
-      return locationResult;
+      const validatedLocation = this.validateAndNormalizeLocation(locationResult.location, classID, term);
+      if (validatedLocation) {
+        locationResult.location = validatedLocation;
+        return locationResult;
+      }
     }
 
     // Strategy 3: Broader search
     const broadResult = this.parseLocationBroad(dataTexts, classIndex, classID);
     if (broadResult.location) {
       Object.assign(locationResult, broadResult);
-      locationResult.location = this.validateAndNormalizeLocation(locationResult.location, classID, term);
-      return locationResult;
+      const validatedLocation = this.validateAndNormalizeLocation(locationResult.location, classID, term);
+      if (validatedLocation) {
+        locationResult.location = validatedLocation;
+        return locationResult;
+      }
     }
 
+    // No location found
     this.locationWarnings.push({
       classID,
       term,
-      issue: 'No location data found',
+      issue: 'No location data found, using default UNSW Kensington',
       searchedRange: `${classIndex} to ${Math.min(dataTexts.length, classIndex + 200)}`
     });
 
-    return locationResult;
+    return {
+      location: 'UNSW Kensington',
+      building: 'UNSW',
+      room: 'Kensington',
+      mode: 'In Person'
+    };
   }
 
   parseLocationCondensed(dataTexts, classIndex) {
