@@ -11,6 +11,7 @@
     "test-firebase": "node tests/test-firebase.js",
     "test-schedule": "node tests/test-schedule-location.js",
     "test-location": "node tests/test-location-analysis.js",
+    "test-location-edge": "node tests/test-location-edge-cases.js",
     "test-any-term": "node tests/test-any-term.js"
   },
   "dependencies": {

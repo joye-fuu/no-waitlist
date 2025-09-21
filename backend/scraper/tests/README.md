@@ -19,7 +19,48 @@ This folder contains test scripts for debugging and validating the UNSW timetabl
 
 - **`test-schedule-location.js`** - Tests schedule and location data extraction
 - **`test-location-analysis.js`** - Analyzes location data patterns in HTML
+- **`test-location-edge-cases.js`** - Tests enhanced location parsing for edge cases like COMP4920 tutorials
 - **`test-final-logic.js`** - Tests final scraper logic with exact parsing code
+
+## Location Edge Case Handling
+
+The scraper uses a **multi-strategy approach** to handle location parsing edge cases:
+
+### Strategy 1: Condensed Format Search
+
+- Searches within 150 elements after class data
+- Works for most standard classes
+- Handles venue patterns like "Quadrangle G048 (K-E15-G048)"
+
+### Strategy 2: Expanded Detailed Format Search
+
+- Searches in detailed section (index 700+)
+- Specifically handles COMP4920-style tutorials
+- Matches class ID in expanded section and finds nearby location
+
+### Strategy 3: Broad Pattern-Based Search
+
+- Wide-range search with location candidates
+- Pattern matching for known buildings (Quadrangle, Matthews, Goldstein, etc.)
+- Distance-based ranking of location candidates
+
+### HTML Entity Cleaning
+
+Inspired by devsoc-unsw/timetable-scraper approach:
+
+- Cleans `&nbsp;`, `&amp;`, `&lt;`, `&gt;`, etc.
+- Validates location data with regex patterns
+- Generates warnings for invalid/missing location data
+
+### Example Results
+
+```
+COMP4920 Tutorial Classes:
+✅ Class 6047 - "Goldstein G05 (K-D16-G05)" (Building: Goldstein, Room: G05)
+✅ Class 5883 - "Science Theatre (K-F13-G09)" (Building: Science, Room: Theatre)
+✅ Class 5884 - "Squarehouse 208 (K-E4-208)" (Building: Squarehouse, Room: 208)
+⚠️  Class 2317 - No location found (likely legitimate missing data)
+```
 
 ## Running Tests
 
@@ -37,6 +78,7 @@ npm run test-comp-t3          # Test COMP T3 2025 scraping
 npm run test-any-term         # Test parsing with any term
 npm run test-schedule         # Test schedule parsing
 npm run test-location         # Test location analysis
+npm run test-location-edge    # Test location edge cases (COMP4920, etc.)
 ```
 
 ### Direct node commands:

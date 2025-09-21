@@ -31,6 +31,7 @@ class UNSWTimetableScraper {
     this.browser = null;
     this.isTestRun = isTestRun;
     this.scrapedClasses = [];
+    this.locationWarnings = [];
     console.log('🎯 COMP T3 2025 Scraper initialized');
     console.log('📊 Configuration: COMP courses only, Term 3 2025');
   }
@@ -277,47 +278,9 @@ class UNSWTimetableScraper {
               }
             }
             
-            // Parse location information - use much wider search window (location is 140+ elements later)
-            let location = '';
-            let building = '';
-            let room = '';
-            
-            // Location data appears much later in the sequence (140+ elements), so search a very wide range
-            const locationSearchWindow = dataTexts.slice(i, Math.min(dataTexts.length, i + 150));
-            
-            for (let j = 0; j < locationSearchWindow.length; j++) {
-              const text = locationSearchWindow[j];
-              
-              // Look for venue patterns like "Quadrangle G048 (K-E15-G048)" or "Online (ONLINE)"
-              const venueMatch = text.match(/^([A-Za-z\s]+)\s+([A-Za-z0-9]+)\s*\(([^)]+)\)$/);
-              if (venueMatch && !location) {
-                building = venueMatch[1].trim();
-                room = venueMatch[2].trim();
-                location = text;
-                break; // Take the first proper venue found
-              }
-              
-              // Look for online indicators with parentheses like "Online (ONLINE)"
-              if (text.match(/^Online\s*\([^)]+\)$/i) && !location) {
-                location = text;
-                building = 'Online';
-                room = '';
-                break;
-              }
-              
-              // Look for simple building room patterns like "CLB 7", "Matthews 311"
-              const simpleVenueMatch = text.match(/^([A-Za-z]{2,})\s+([A-Za-z0-9]{1,4})$/);
-              if (simpleVenueMatch && 
-                  !text.match(/^(Open|Full|On Hold|T1|T2|T3|Course Enrolment|Laboratory|Tutorial|Lecture|TERM|Teaching)$/i) &&
-                  !text.match(/^\d+\/\d+$/) &&
-                  !text.match(/^[A-Z]\d{2,3}[A-Z]?$/) && // Section codes like H11A
-                  text.length > 3 && text.length < 20 && !location) {
-                building = simpleVenueMatch[1];
-                room = simpleVenueMatch[2];
-                location = text;
-                break;
-              }
-            }
+            // Parse location information using enhanced strategies
+            const locationData = this.parseLocationData(dataTexts, i, classId, term);
+            const { location, building, room, mode } = locationData;
             
             // Parse enrolment
             const [enrolled, capacity] = enrolment.split('/').map(num => parseInt(num) || 0);
@@ -351,7 +314,7 @@ class UNSWTimetableScraper {
                   building: building || '',
                   room: room || ''
                 },
-                mode: location.toLowerCase().includes('online') ? 'Online' : 'In Person',
+                mode: mode || 'Unknown',
                 lastUpdated: new Date().toISOString()
               });
             }
@@ -394,6 +357,17 @@ class UNSWTimetableScraper {
     console.log('Courses:', Object.entries(coursesSummary).map(([course, count]) => `${course}: ${count}`).join(', '));
     console.log('Status:', Object.entries(statusSummary).map(([status, count]) => `${status}: ${count}`).join(', '));
     
+    // Log location warnings if any
+    if (this.locationWarnings.length > 0) {
+      console.log('⚠️  Location parsing warnings:');
+      this.locationWarnings.slice(0, 10).forEach(warning => {
+        console.log(`  Class ${warning.classID} (${warning.term}): ${warning.issue}`);
+      });
+      if (this.locationWarnings.length > 10) {
+        console.log(`  ... and ${this.locationWarnings.length - 10} more warnings`);
+      }
+    }
+    
     const batch = db.batch();
     let batchCount = 0;
     
@@ -420,6 +394,229 @@ class UNSWTimetableScraper {
     }
     
     console.log('✅ Successfully saved all COMP T3 2025 classes to Firestore');
+  }
+
+  // Utility function to clean HTML entities (similar to devsoc-unsw transformHtmlSpecials)
+  cleanHtmlEntities(str) {
+    if (!str) return '';
+    
+    let cleaned = str.toString()
+      .replace(/&amp;/g, 'and')
+      .replace(/&nbsp;/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
+    
+    return cleaned;
+  }
+
+  // Validate and normalize location data (inspired by devsoc-unsw getLocation)
+  validateAndNormalizeLocation(locationText, classID, term) {
+    if (!locationText) return null;
+    
+    const cleaned = this.cleanHtmlEntities(locationText);
+    
+    // Check if location contains alphabetic characters (basic validation)
+    const hasValidContent = /[A-Za-z]/.test(cleaned);
+    
+    if (!hasValidContent || cleaned.length < 2) {
+      this.locationWarnings.push({
+        classID,
+        term,
+        issue: 'Invalid location format',
+        value: cleaned,
+        original: locationText
+      });
+      return null;
+    }
+    
+    return cleaned;
+  }
+
+  // Enhanced location parsing with multiple strategies
+  parseLocationData(dataTexts, classIndex, classID, term) {
+    const locationResult = {
+      location: '',
+      building: '',
+      room: '',
+      mode: 'Unknown'
+    };
+
+    // Strategy 1: Look in condensed format (original approach)
+    const condensedResult = this.parseLocationCondensed(dataTexts, classIndex);
+    if (condensedResult.location) {
+      Object.assign(locationResult, condensedResult);
+      locationResult.location = this.validateAndNormalizeLocation(locationResult.location, classID, term);
+      return locationResult;
+    }
+
+    // Strategy 2: Look in expanded detailed format (for classes like COMP4920 tutorials)
+    const expandedResult = this.parseLocationExpanded(dataTexts, classID);
+    if (expandedResult.location) {
+      Object.assign(locationResult, expandedResult);
+      locationResult.location = this.validateAndNormalizeLocation(locationResult.location, classID, term);
+      return locationResult;
+    }
+
+    // Strategy 3: Broader search with pattern matching
+    const broadResult = this.parseLocationBroad(dataTexts, classIndex, classID);
+    if (broadResult.location) {
+      Object.assign(locationResult, broadResult);
+      locationResult.location = this.validateAndNormalizeLocation(locationResult.location, classID, term);
+      return locationResult;
+    }
+
+    // No location found
+    this.locationWarnings.push({
+      classID,
+      term,
+      issue: 'No location data found',
+      searchedRange: `${classIndex} to ${Math.min(dataTexts.length, classIndex + 200)}`
+    });
+
+    return locationResult;
+  }
+
+  // Original condensed format parsing
+  parseLocationCondensed(dataTexts, classIndex) {
+    const locationSearchWindow = dataTexts.slice(classIndex, Math.min(dataTexts.length, classIndex + 150));
+    
+    for (let j = 0; j < locationSearchWindow.length; j++) {
+      const text = locationSearchWindow[j];
+      
+      // Look for venue patterns like "Quadrangle G048 (K-E15-G048)"
+      const venueMatch = text.match(/^([A-Za-z\s]+)\s+([A-Za-z0-9]+)\s*\(([^)]+)\)$/);
+      if (venueMatch) {
+        return {
+          building: venueMatch[1].trim(),
+          room: venueMatch[2].trim(),
+          location: text,
+          mode: 'In Person'
+        };
+      }
+      
+      // Look for online indicators
+      if (text.match(/^Online\s*\([^)]+\)$/i)) {
+        return {
+          location: text,
+          building: 'Online',
+          room: '',
+          mode: 'Online'
+        };
+      }
+      
+      // Simple building room patterns
+      const simpleVenueMatch = text.match(/^([A-Za-z]{2,})\s+([A-Za-z0-9]{1,4})$/);
+      if (simpleVenueMatch && 
+          !text.match(/^(Open|Full|On Hold|T1|T2|T3|Course Enrolment|Laboratory|Tutorial|Lecture|TERM|Teaching)$/i) &&
+          !text.match(/^\d+\/\d+$/) &&
+          !text.match(/^[A-Z]\d{2,3}[A-Z]?$/) &&
+          text.length > 3 && text.length < 20) {
+        return {
+          building: simpleVenueMatch[1],
+          room: simpleVenueMatch[2],
+          location: text,
+          mode: 'In Person'
+        };
+      }
+    }
+    
+    return { location: '', building: '', room: '', mode: 'Unknown' };
+  }
+
+  // Parse location from expanded detailed format (for COMP4920 style)
+  parseLocationExpanded(dataTexts, classID) {
+    // Look for the classID in the expanded section (usually after index 700+)
+    for (let i = 700; i < dataTexts.length - 10; i++) {
+      if (dataTexts[i] === classID.toString()) {
+        // Look for location pattern in the next 20 elements
+        for (let j = i + 1; j < Math.min(dataTexts.length, i + 20); j++) {
+          const text = dataTexts[j];
+          
+          // Venue patterns
+          const venueMatch = text.match(/^([A-Za-z\s]+)\s+([A-Za-z0-9]+)\s*\(([^)]+)\)$/);
+          if (venueMatch) {
+            return {
+              building: venueMatch[1].trim(),
+              room: venueMatch[2].trim(),
+              location: text,
+              mode: 'In Person'
+            };
+          }
+          
+          // Online patterns
+          if (text.match(/^Online\s*\([^)]+\)$/i)) {
+            return {
+              location: text,
+              building: 'Online',
+              room: '',
+              mode: 'Online'
+            };
+          }
+        }
+      }
+    }
+    
+    return { location: '', building: '', room: '', mode: 'Unknown' };
+  }
+
+  // Broad pattern-based search
+  parseLocationBroad(dataTexts, classIndex, classID) {
+    // Search in wider range for any location-like patterns
+    const searchStart = Math.max(0, classIndex - 50);
+    const searchEnd = Math.min(dataTexts.length, classIndex + 300);
+    
+    const locationCandidates = [];
+    
+    for (let i = searchStart; i < searchEnd; i++) {
+      const text = dataTexts[i];
+      
+      // Look for patterns that could be venues
+      if (text.includes('Quadrangle') || 
+          text.includes('Matthews') || 
+          text.includes('Goldstein') ||
+          text.includes('Webster') ||
+          text.includes('Science Theatre') ||
+          text.match(/^[A-Za-z\s]+\s+[A-Za-z0-9]+\s*\([^)]+\)$/) ||
+          text.match(/^Online\s*\([^)]+\)$/i)) {
+        
+        locationCandidates.push({
+          text,
+          distance: Math.abs(i - classIndex),
+          index: i
+        });
+      }
+    }
+    
+    // Return the closest valid location candidate
+    if (locationCandidates.length > 0) {
+      locationCandidates.sort((a, b) => a.distance - b.distance);
+      const best = locationCandidates[0];
+      
+      // Parse the best candidate
+      const venueMatch = best.text.match(/^([A-Za-z\s]+)\s+([A-Za-z0-9]+)\s*\(([^)]+)\)$/);
+      if (venueMatch) {
+        return {
+          building: venueMatch[1].trim(),
+          room: venueMatch[2].trim(),
+          location: best.text,
+          mode: 'In Person'
+        };
+      }
+      
+      if (best.text.match(/^Online\s*\([^)]+\)$/i)) {
+        return {
+          location: best.text,
+          building: 'Online',
+          room: '',
+          mode: 'Online'
+        };
+      }
+    }
+    
+    return { location: '', building: '', room: '', mode: 'Unknown' };
   }
 }
 

@@ -7,6 +7,14 @@
 import Foundation
 import FirebaseFirestore
 
+let db = Firestore.firestore()
+
+func load() async throws -> [ClassOffering] {
+    let snapshot = try await db.collection("classes").getDocuments()
+    return try snapshot.documents.map { try $0.data(as: ClassOffering.self)}
+}
+
+
 //var courses: [ClassInfo] = load("courseData.json")
 //
 //func load<T: Decodable>(_ filename: String) -> T {

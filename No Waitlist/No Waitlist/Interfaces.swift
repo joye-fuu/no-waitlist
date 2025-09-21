@@ -4,30 +4,49 @@
 //
 //  Created by Joye Fu on 20/9/2025.
 //
-import Foundation
 
-struct ClassInfo: Hashable, Codable {
-    var classID: Int // 1234
-    var activity: String // lab, tute
-    var courseCode: String // COMP1234
-    var capcity: Int
-    var enrolments: Int
-    var courseName: String // Object-oriented blah
-    var mode: String // In person, online
-    var section: String // M11A, M13A
+import Foundation
+import FirebaseFirestore
+
+struct ClassOffering: Identifiable, Codable {
+    @DocumentID var id: String?
+
+    // top-level fields
+    var activity: String
+    var classID: Int
+    var courseCode: String
+    var courseName: String
+    var mode: String         // e.g. "In Person"
+
+    var scrapedFor: String
+    var section: String
+    var status: String
+    var term: String
+
+    // nested maps
+    var courseEnrolment: CourseEnrolment
+    var location: Location
+    var schedule: Schedule
+
+    // Firestore Timestamp -> Date
+    @ServerTimestamp var lastUpdated: Date?
 }
 
-//struct CourseInfo: Hashable, Codable {
-//    var code: String // COMP1234
-//    var term: String // T1, T2, T3
-//    var classes: [ClassInfo]
-//}
-//
-//struct ClassInfo: Hashable, Codable {
-//    var id: Int // 2922
-//    var code: String // W12A
-//    var activity: String // Lecture, Lab, Tutorial, Seminar
-//    var start: String // 12:00
-//    var end: String // 14:00
-//    var location: String // Central Lecture Block 7
-//}
+struct CourseEnrolment: Codable {
+    var capacity: Int
+    var enrolments: Int
+}
+
+struct Location: Codable {
+    var building: String
+    var full: String
+    var room: String
+}
+
+struct Schedule: Codable {
+    var dayOfWeek: String    // e.g. "Wed"
+    var startTime: String    // "16:00"
+    var endTime: String      // "18:00"
+    var timeDisplay: String  // "16:00-18:00"
+    var fullSchedule: String
+}
