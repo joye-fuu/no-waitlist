@@ -5,7 +5,7 @@
 //  Created by Joye Fu on 20/9/2025.
 //
 import Foundation
-var courses: [CourseInfo] = load("courseData.json")
+var courses: [ClassInfo] = load("courseData.json")
 
 func load<T: Decodable>(_ filename: String) -> T {
     let data: Data

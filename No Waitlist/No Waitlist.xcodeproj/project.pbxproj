@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C356807A2E7FA15C00F68D74 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = C35680792E7FA15C00F68D74 /* FirebaseAuth */; };
+		C356807C2E7FA23300F68D74 /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = C356807B2E7FA23300F68D74 /* FirebaseFunctions */; };
 		C36B47832E7DBAC90014685A /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = C36B47822E7DBAC90014685A /* FirebaseAnalytics */; };
 		C36B47852E7DBAC90014685A /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = C36B47842E7DBAC90014685A /* FirebaseCrashlytics */; };
 		C36B47872E7DBAC90014685A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C36B47862E7DBAC90014685A /* FirebaseFirestore */; };
@@ -31,7 +33,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				C36B47892E7DBAC90014685A /* FirebaseMessaging in Frameworks */,
+				C356807A2E7FA15C00F68D74 /* FirebaseAuth in Frameworks */,
 				C36B47832E7DBAC90014685A /* FirebaseAnalytics in Frameworks */,
+				C356807C2E7FA23300F68D74 /* FirebaseFunctions in Frameworks */,
 				C36B47852E7DBAC90014685A /* FirebaseCrashlytics in Frameworks */,
 				C36B47872E7DBAC90014685A /* FirebaseFirestore in Frameworks */,
 			);
@@ -40,10 +44,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C35680782E7FA15C00F68D74 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		C36B47662E7DB61E0014685A = {
 			isa = PBXGroup;
 			children = (
 				C36B47712E7DB61E0014685A /* No Waitlist */,
+				C35680782E7FA15C00F68D74 /* Frameworks */,
 				C36B47702E7DB61E0014685A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -80,6 +92,8 @@
 				C36B47842E7DBAC90014685A /* FirebaseCrashlytics */,
 				C36B47862E7DBAC90014685A /* FirebaseFirestore */,
 				C36B47882E7DBAC90014685A /* FirebaseMessaging */,
+				C35680792E7FA15C00F68D74 /* FirebaseAuth */,
+				C356807B2E7FA23300F68D74 /* FirebaseFunctions */,
 			);
 			productName = "No Waitlist";
 			productReference = C36B476F2E7DB61E0014685A /* No Waitlist.app */;
@@ -369,6 +383,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		C35680792E7FA15C00F68D74 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C36B47812E7DBAC90014685A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		C356807B2E7FA23300F68D74 /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C36B47812E7DBAC90014685A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
 		C36B47822E7DBAC90014685A /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C36B47812E7DBAC90014685A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

@@ -23,7 +23,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct No_WaitlistApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    @StateObject private var authManager = AuthManager()
+//    @StateObject private var authManager = AuthManager()
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -41,7 +41,7 @@ struct No_WaitlistApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environmentObject(authManager)
+//                .environmentObject(authManager)
         }
         .modelContainer(sharedModelContainer)
     }
