@@ -11,6 +11,7 @@ backend/scraper/local_tests
 backend/scraper/debug-*.js
 backend/scraper/deep-dive-*.js
 backend/scraper/*.log
+backend/scraper/temp-*.js
 
 # GitHub Actions
 .github/workflows/*.json

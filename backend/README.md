@@ -95,6 +95,30 @@ Each scraped class includes:
 }
 ```
 
+## Testing
+
+The `tests/` folder contains various test scripts for debugging and validation:
+
+```bash
+# Test Firebase connection
+npm run test-firebase
+
+# Test scraping logic (any term)
+npm run test-any-term
+
+# Test specific COMP T3 2025 scraping
+npm run test-comp-t3
+
+# Test GitHub Actions compatibility
+npm run test-actions
+
+# Test schedule and location parsing
+npm run test-schedule
+npm run test-location
+```
+
+See `tests/README.md` for detailed test documentation.
+
 ## Troubleshooting
 
 - **No classes found:** Normal if T3 hasn't started or COMP courses aren't published yet

@@ -245,64 +245,77 @@ class UNSWTimetableScraper {
               }
             }
             
-            // Parse time information - look for time patterns like "09:00-11:00" or "14:00-16:00"
+            // Parse time information - look for complex time patterns in 2025 format
             let startTime = '';
             let endTime = '';
             let dayOfWeek = '';
+            let fullSchedule = '';
             
             for (let j = 0; j < potential.length; j++) {
               const text = potential[j];
               
-              // Look for time patterns
-              const timeMatch = text.match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
-              if (timeMatch) {
-                startTime = timeMatch[1];
-                endTime = timeMatch[2];
+              // Look for complex schedule patterns like "Wed 11:00 - 13:00 (Weeks:1-5,7-10)"
+              const complexScheduleMatch = text.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+              if (complexScheduleMatch) {
+                dayOfWeek = complexScheduleMatch[1];
+                startTime = complexScheduleMatch[2];
+                endTime = complexScheduleMatch[3];
+                fullSchedule = text;
+                break; // Take the first schedule found
               }
               
-              // Look for day patterns (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
-              if (text.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)) {
+              // Look for simple time patterns like "11:00 - 13:00"
+              const simpleTimeMatch = text.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+              if (simpleTimeMatch && !startTime) {
+                startTime = simpleTimeMatch[1];
+                endTime = simpleTimeMatch[2];
+              }
+              
+              // Look for standalone day patterns (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+              if (text.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/) && !dayOfWeek) {
                 dayOfWeek = text;
               }
             }
             
-            // Parse location information - look for building/room patterns
+            // Parse location information - use much wider search window (location is 140+ elements later)
             let location = '';
             let building = '';
             let room = '';
             
-            for (let j = 0; j < potential.length; j++) {
-              const text = potential[j];
+            // Location data appears much later in the sequence (140+ elements), so search a very wide range
+            const locationSearchWindow = dataTexts.slice(i, Math.min(dataTexts.length, i + 150));
+            
+            for (let j = 0; j < locationSearchWindow.length; j++) {
+              const text = locationSearchWindow[j];
               
-              // Look for room patterns (like "CLB 7", "Mathews 311", "Online", etc.)
-              if (text && text.length > 1 && text.length < 30) {
-                // Check if it looks like a location (contains letters and possibly numbers)
-                if (text.match(/^[A-Za-z][A-Za-z0-9\s\-\.]*[A-Za-z0-9]$/) &&
-                    !text.match(/^(Open|Full|On Hold|T1|T2|T3|Course Enrolment|Laboratory|Tutorial|Lecture)$/) &&
-                    !text.match(/^\d+\/\d+$/) &&
-                    !text.match(/^\d{2}:\d{2}-\d{2}:\d{2}$/) &&
-                    !text.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)) {
-                  
-                  // Try to determine if this is a building or room
-                  const roomMatch = text.match(/^([A-Za-z\s]+)\s+(\d+[A-Za-z]?)$/);
-                  if (roomMatch) {
-                    building = roomMatch[1].trim();
-                    room = roomMatch[2].trim();
-                    location = text;
-                  } else if (text.toLowerCase().includes('online') || 
-                             text.toLowerCase().includes('remote') ||
-                             text.toLowerCase().includes('zoom')) {
-                    location = text;
-                    building = 'Online';
-                    room = '';
-                  } else if (text.length > 3 && text.length < 20) {
-                    // Potential building/location name
-                    if (!location) { // Only set if we haven't found one yet
-                      location = text;
-                      building = text;
-                    }
-                  }
-                }
+              // Look for venue patterns like "Quadrangle G048 (K-E15-G048)" or "Online (ONLINE)"
+              const venueMatch = text.match(/^([A-Za-z\s]+)\s+([A-Za-z0-9]+)\s*\(([^)]+)\)$/);
+              if (venueMatch && !location) {
+                building = venueMatch[1].trim();
+                room = venueMatch[2].trim();
+                location = text;
+                break; // Take the first proper venue found
+              }
+              
+              // Look for online indicators with parentheses like "Online (ONLINE)"
+              if (text.match(/^Online\s*\([^)]+\)$/i) && !location) {
+                location = text;
+                building = 'Online';
+                room = '';
+                break;
+              }
+              
+              // Look for simple building room patterns like "CLB 7", "Matthews 311"
+              const simpleVenueMatch = text.match(/^([A-Za-z]{2,})\s+([A-Za-z0-9]{1,4})$/);
+              if (simpleVenueMatch && 
+                  !text.match(/^(Open|Full|On Hold|T1|T2|T3|Course Enrolment|Laboratory|Tutorial|Lecture|TERM|Teaching)$/i) &&
+                  !text.match(/^\d+\/\d+$/) &&
+                  !text.match(/^[A-Z]\d{2,3}[A-Z]?$/) && // Section codes like H11A
+                  text.length > 3 && text.length < 20 && !location) {
+                building = simpleVenueMatch[1];
+                room = simpleVenueMatch[2];
+                location = text;
+                break;
               }
             }
             
@@ -330,7 +343,8 @@ class UNSWTimetableScraper {
                   dayOfWeek: dayOfWeek || '',
                   startTime: startTime || '',
                   endTime: endTime || '',
-                  timeDisplay: startTime && endTime ? `${startTime}-${endTime}` : ''
+                  timeDisplay: startTime && endTime ? `${startTime}-${endTime}` : '',
+                  fullSchedule: fullSchedule || '' // Include the complete schedule string
                 },
                 location: {
                   full: location || '',

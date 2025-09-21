@@ -6,9 +6,12 @@
   "scripts": {
     "scrape": "node index.js",
     "test": "node index.js --test",
-    "test-comp-t3": "node test-focused-comp-2025.js",
-    "test-actions": "node test-github-actions.js",
-    "test-firebase": "node test-firebase.js"
+    "test-comp-t3": "node tests/test-focused-comp-2025.js",
+    "test-actions": "node tests/test-github-actions.js",
+    "test-firebase": "node tests/test-firebase.js",
+    "test-schedule": "node tests/test-schedule-location.js",
+    "test-location": "node tests/test-location-analysis.js",
+    "test-any-term": "node tests/test-any-term.js"
   },
   "dependencies": {
     "firebase-admin": "^12.4.0",
