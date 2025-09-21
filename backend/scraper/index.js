@@ -202,8 +202,8 @@ class UNSWTimetableScraper {
         const seenClasses = new Set(); // Avoid duplicates
         
         // Look for class data sequences in the 2025 format
-        for (let i = 0; i < dataTexts.length - 8; i++) {
-          const potential = dataTexts.slice(i, i + 10);
+        for (let i = 0; i < dataTexts.length - 12; i++) {
+          const potential = dataTexts.slice(i, i + 15); // Increased window to capture more data
           
           // Check if this looks like a class record (2025 format)
           const classId = parseInt(potential[0]);
@@ -221,9 +221,9 @@ class UNSWTimetableScraper {
           const termIndex = potential.findIndex(text => text === 'T3');
           
           // Must have all three indicators and in reasonable positions, and must be T3
-          if (statusIndex > 0 && statusIndex < 5 && 
-              enrolmentIndex > 0 && enrolmentIndex < 5 && 
-              termIndex > 0 && termIndex < 8) {
+          if (statusIndex > 0 && statusIndex < 7 && 
+              enrolmentIndex > 0 && enrolmentIndex < 7 && 
+              termIndex > 0 && termIndex < 10) {
             
             // Extract the structured data
             const section = potential[1] || '';
@@ -242,6 +242,67 @@ class UNSWTimetableScraper {
               )) {
                 activity = potential[j];
                 break;
+              }
+            }
+            
+            // Parse time information - look for time patterns like "09:00-11:00" or "14:00-16:00"
+            let startTime = '';
+            let endTime = '';
+            let dayOfWeek = '';
+            
+            for (let j = 0; j < potential.length; j++) {
+              const text = potential[j];
+              
+              // Look for time patterns
+              const timeMatch = text.match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
+              if (timeMatch) {
+                startTime = timeMatch[1];
+                endTime = timeMatch[2];
+              }
+              
+              // Look for day patterns (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+              if (text.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)) {
+                dayOfWeek = text;
+              }
+            }
+            
+            // Parse location information - look for building/room patterns
+            let location = '';
+            let building = '';
+            let room = '';
+            
+            for (let j = 0; j < potential.length; j++) {
+              const text = potential[j];
+              
+              // Look for room patterns (like "CLB 7", "Mathews 311", "Online", etc.)
+              if (text && text.length > 1 && text.length < 30) {
+                // Check if it looks like a location (contains letters and possibly numbers)
+                if (text.match(/^[A-Za-z][A-Za-z0-9\s\-\.]*[A-Za-z0-9]$/) &&
+                    !text.match(/^(Open|Full|On Hold|T1|T2|T3|Course Enrolment|Laboratory|Tutorial|Lecture)$/) &&
+                    !text.match(/^\d+\/\d+$/) &&
+                    !text.match(/^\d{2}:\d{2}-\d{2}:\d{2}$/) &&
+                    !text.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/)) {
+                  
+                  // Try to determine if this is a building or room
+                  const roomMatch = text.match(/^([A-Za-z\s]+)\s+(\d+[A-Za-z]?)$/);
+                  if (roomMatch) {
+                    building = roomMatch[1].trim();
+                    room = roomMatch[2].trim();
+                    location = text;
+                  } else if (text.toLowerCase().includes('online') || 
+                             text.toLowerCase().includes('remote') ||
+                             text.toLowerCase().includes('zoom')) {
+                    location = text;
+                    building = 'Online';
+                    room = '';
+                  } else if (text.length > 3 && text.length < 20) {
+                    // Potential building/location name
+                    if (!location) { // Only set if we haven't found one yet
+                      location = text;
+                      building = text;
+                    }
+                  }
+                }
               }
             }
             
@@ -265,7 +326,18 @@ class UNSWTimetableScraper {
                   enrolments: enrolled,
                   capacity: capacity
                 },
-                mode: 'In Person',
+                schedule: {
+                  dayOfWeek: dayOfWeek || '',
+                  startTime: startTime || '',
+                  endTime: endTime || '',
+                  timeDisplay: startTime && endTime ? `${startTime}-${endTime}` : ''
+                },
+                location: {
+                  full: location || '',
+                  building: building || '',
+                  room: room || ''
+                },
+                mode: location.toLowerCase().includes('online') ? 'Online' : 'In Person',
                 lastUpdated: new Date().toISOString()
               });
             }
