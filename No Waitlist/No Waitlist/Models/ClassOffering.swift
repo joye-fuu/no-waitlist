@@ -1,5 +1,5 @@
 //
-//  Interfaces.swift
+//  ClassOffering.swift
 //  No Waitlist
 //
 //  Created by Joye Fu on 20/9/2025.
@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseFirestore
+import SwiftUI
 
 struct ClassOffering: Identifiable, Codable {
     @DocumentID var id: String?
@@ -37,10 +38,34 @@ struct CourseEnrolment: Codable {
     var enrolments: Int
 }
 
+extension CourseEnrolment {
+    var displayString: String {
+        return "\(enrolments)/\(capacity)"
+    }
+    
+    var displayColor: Color {
+        if enrolments < capacity {
+            return AppColor.primaryGreen
+        } else {
+            return AppColor.primaryRed
+        }
+    }
+}
+
 struct Location: Codable {
     var building: String
     var full: String
     var room: String
+}
+
+extension Location {
+    var displayString: String {
+        if building.isEmpty || room.isEmpty {
+            return "Location not available"
+        } else {
+            return "\(building) \(room)"
+        }
+    }
 }
 
 struct Schedule: Codable {
@@ -49,4 +74,14 @@ struct Schedule: Codable {
     var endTime: String      // "18:00"
     var timeDisplay: String  // "16:00-18:00"
     var fullSchedule: String
+}
+
+extension Schedule {
+    var displayString: String {
+        if dayOfWeek.isEmpty || startTime.isEmpty || endTime.isEmpty {
+            return "-"
+        } else {
+            return "\(dayOfWeek) \(startTime) - \(endTime)"
+        }
+    }
 }
