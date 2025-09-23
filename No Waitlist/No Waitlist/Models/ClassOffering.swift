@@ -61,7 +61,7 @@ struct Location: Codable {
 extension Location {
     var displayString: String {
         if building.isEmpty || room.isEmpty {
-            return "Location not available"
+            return "Online"
         } else {
             return "\(building) \(room)"
         }

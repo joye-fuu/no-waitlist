@@ -18,4 +18,5 @@ enum AppColor {
     static let textHeading = Color("TextHeading")
     static let textParagraph = Color("TextParagraph")
     static let textSubtitle = Color("TextSubtitle")
+    static let selectGreen = Color("SelectGreen")
 }

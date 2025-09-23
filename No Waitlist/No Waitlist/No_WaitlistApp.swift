@@ -40,9 +40,11 @@ struct No_WaitlistApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
-                .environmentObject(classStore)
+            NavigationStack {
+                HomeView()
+            }
         }
+        .environmentObject(classStore)
         .modelContainer(sharedModelContainer)
     }
 }
